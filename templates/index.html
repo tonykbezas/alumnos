@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Poblar Base de Datos</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 0 20px;
+        }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ccc;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            border-bottom: none;
+        }
+
+        .tab.active {
+            background-color: #f0f0f0;
+            border-color: #ccc;
+            font-weight: bold;
+        }
+
+        .form-section {
+            display: none;
+        }
+
+        .form-section.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        #message {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Poblar Base de Datos</h1>
+
+    <div class="tabs">
+        <div class="tab active" onclick="showTab('alumnos')">Alumnos</div>
+        <div class="tab" onclick="showTab('cursos')">Cursos</div>
+        <div class="tab" onclick="showTab('alumnos_cursos')">Alumnos Cursos</div>
+    </div>
+
+    <!-- Formulario Alumnos -->
+    <div id="alumnos" class="form-section active">
+        <h2>Insertar Alumno</h2>
+        <form onsubmit="submitForm(event, 'alumnos')">
+            <div class="form-group">
+                <label for="nombre">Nombre:</label>
+                <input type="text" id="nombre" name="nombre" required>
+            </div>
+            <div class="form-group">
+                <label for="apellidos">Apellidos:</label>
+                <input type="text" id="apellidos" name="apellidos" required>
+            </div>
+            <div class="form-group">
+                <label for="cedula">Cédula:</label>
+                <input type="text" id="cedula" name="cedula" required>
+            </div>
+            <button type="submit">Guardar Alumno</button>
+        </form>
+    </div>
+
+    <!-- Formulario Cursos -->
+    <div id="cursos" class="form-section">
+        <h2>Insertar Curso</h2>
+        <form onsubmit="submitForm(event, 'cursos')">
+            <div class="form-group">
+                <label for="paralelo">Paralelo:</label>
+                <input type="text" id="paralelo" name="paralelo" required>
+            </div>
+            <div class="form-group">
+                <label for="dc_tutor">DC Tutor:</label>
+                <input type="text" id="dc_tutor" name="dc_tutor">
+            </div>
+            <button type="submit">Guardar Curso</button>
+        </form>
+    </div>
+
+    <!-- Formulario Alumnos Cursos -->
+    <div id="alumnos_cursos" class="form-section">
+        <h2>Asignar Alumno a Curso</h2>
+        <form onsubmit="submitForm(event, 'alumnos_cursos')">
+            <div class="form-group">
+                <label for="ac_paralelo">Paralelo (FK):</label>
+                <select id="ac_paralelo" name="paralelo" required>
+                    <option value="">Cargando...</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="ac_cedula">Cédula Alumno (FK):</label>
+                <select id="ac_cedula" name="cedula_alumnos" required>
+                    <option value="">Cargando...</option>
+                </select>
+            </div>
+            <!-- ID_tabla is now automatic -->
+            <button type="submit">Guardar Relación</button>
+        </form>
+    </div>
+
+    <div id="message"></div>
+
+    <script>
+        function showTab(tabId) {
+            document.querySelectorAll('.form-section').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+
+            document.getElementById(tabId).classList.add('active');
+            event.target.classList.add('active');
+            document.getElementById('message').className = '';
+            document.getElementById('message').innerText = '';
+
+            if (tabId === 'alumnos_cursos') {
+                loadOptions();
+            }
+        }
+
+        async function loadOptions() {
+            try {
+                // Load Cursos
+                const resCursos = await fetch('/api/list/cursos');
+                const cursos = await resCursos.json();
+                const selectCursos = document.getElementById('ac_paralelo');
+                selectCursos.innerHTML = '<option value="">Seleccione un Paralelo</option>';
+                cursos.forEach(c => {
+                    const option = document.createElement('option');
+                    option.value = c.paralelo;
+                    option.textContent = c.paralelo;
+                    selectCursos.appendChild(option);
+                });
+
+                // Load Alumnos
+                const resAlumnos = await fetch('/api/list/alumnos');
+                const alumnos = await resAlumnos.json();
+                const selectAlumnos = document.getElementById('ac_cedula');
+                selectAlumnos.innerHTML = '<option value="">Seleccione un Alumno</option>';
+                alumnos.forEach(a => {
+                    const option = document.createElement('option');
+                    option.value = a.cedula;
+                    option.textContent = `${a.nombre} ${a.apellidos} (${a.cedula})`;
+                    selectAlumnos.appendChild(option);
+                });
+
+            } catch (error) {
+                console.error('Error loading options:', error);
+                document.getElementById('message').innerText = 'Error cargando listas: ' + error.message;
+                document.getElementById('message').className = 'error';
+            }
+        }
+
+        async function submitForm(event, type) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+            const messageDiv = document.getElementById('message');
+
+            try {
+                const response = await fetch(`/api/insert/${type}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    messageDiv.className = 'success';
+                    messageDiv.innerText = result.message;
+                    form.reset();
+                } else {
+                    messageDiv.className = 'error';
+                    messageDiv.innerText = 'Error: ' + (result.error || 'Error desconocido');
+                }
+            } catch (error) {
+                messageDiv.className = 'error';
+                messageDiv.innerText = 'Error de red: ' + error.message;
+            }
+        }
+    </script>
+</body>
+
+</html>
